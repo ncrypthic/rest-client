@@ -19,7 +19,7 @@ There are multiple ways to install `rest-client` executable:
 
 2. With go utility
 
-   If you have golang installed, you can simply run `go install github.com/ncrypthic/rest-client`
+   If you have golang installed, you can simply run `go get -u github.com/ncrypthic/rest-client`
    This will automatically install `rest-client` binary to `GOBIN` path.
 
 ## 2. Usage
@@ -44,20 +44,22 @@ HTTP APIs collection file have a specific format.
 The `Global variables` must be in the following format:
 
 ```
-[Server hostname:port] # Can be replaced per-endpoint
+# Default server location, can be override per-endpoint.
+[Server hostname:port] 
 
-[Variable name]: [Variable value] # to use variable in Endpoint, add a colon (`:`) followed by the variable name (e.g. `:token`)
-
+# Variable can be used in URL path, headers or payload of an Endpoint.
+# To use a variable, simply prepend colon (`:`) with a variable name (e.g. `:token`)
+[Variable name]: [Variable value] 
 ```
 
-Variable placeholder (`:some_variable`) will be replaced by the variable value on URL path, header value or payload of an [Endpoint](#endpoint) before the HTTP request sent to server. `rest-client` will also **watch the API collection file for any changes in the file** and reload every endpoints.
+Variables will be replaced by the variable's value on an [Endpoint](#endpoint) URL path, header value or payload before the HTTP request sent to server. `rest-client` will also **watch the API collection file for any changes in the file** and reload every endpoints.
 
 ### Endpoint
 
 The `[Endpoint]` must be in the following format:
 
 ```
-[SERVER HOST:PORT] # If not exists, will be using host:port from global variables
+[SERVER HOST:PORT] # Optional: Global variable server address will be used iff not specified
 
 [HTTP HeaderName]: [HTTP Header Value]
 [HTTP HeaderName]: [HTTP Header Value]
@@ -65,7 +67,7 @@ The `[Endpoint]` must be in the following format:
 
 [HTTP METHOD] [PATH]
 
-[REQUEST BODY]
+[PAYLOAD]
 ```
 
 ## 3. Example
@@ -91,6 +93,7 @@ GET /home
 http://example1.com
 
 authorization: BEARER :token
+content-type: application/json
 
 PUT /users/:user_id/posts/:post_id
 
@@ -103,14 +106,15 @@ PUT /users/:user_id/posts/:post_id
 
 http://example3.com
 
+content-type: application/x-www-form-urlencoded
+
 POST /users/register
 
-{
-    "username": "test",
-    "password": "topsecret"
-}
+username=test&password=topsecret
 
 --
+
+content-type: application/json
 
 POST /users/register
 
