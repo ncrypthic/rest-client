@@ -57,11 +57,11 @@ The `[Endpoint]` must be in the following format:
 ```
 [SERVER HOST:PORT] # If not exists, will be using host:port from global variables
 
-[HTTP METHOD] [PATH]
-
 [HTTP HeaderName]: [HTTP Header Value]
 [HTTP HeaderName]: [HTTP Header Value]
 ...
+
+[HTTP METHOD] [PATH]
 
 [REQUEST BODY]
 ```
@@ -79,18 +79,18 @@ post_id: abcde12345
 
 --
 
-GET /home
-
 authorization: :token
+
+GET /home
 
 --
 
 
 http://example1.com
 
-PUT /users/:user_id/posts/:post_id
-
 authorization: BEARER :token
+
+PUT /users/:user_id/posts/:post_id
 
 {
     "username": "test",
