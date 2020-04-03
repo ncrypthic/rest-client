@@ -9,11 +9,13 @@ collection file and execution.
 
 There are multiple ways to install `rest-client` executable:
 
-1. Download binary
+1. Download binary (Coming Soon)
 
    1.1 Linux
-   1.2 Windows
-   1.3 OSX
+   
+   1.2 OSX
+   
+   1.3 Windows
 
 2. With go utility
 
@@ -22,7 +24,7 @@ There are multiple ways to install `rest-client` executable:
 
 ## 2. Usage
 
-To use `rest-client`, first you must have a [HTTP APIs collection file](Collection File)
+To use `rest-client`, first you must have a [HTTP APIs collection file](#collection-file)
 
 ### Collection File
 
@@ -48,7 +50,7 @@ The `Global variables` must be in the following format:
 
 ```
 
-Variables will be applied on every part of [Endpoint](Endpoint)
+Variables will be applied on every part of [Endpoint](#endpoint)
 
 ### Endpoint
 
@@ -66,7 +68,7 @@ The `[Endpoint]` must be in the following format:
 [REQUEST BODY]
 ```
 
-### Example
+## 3. Example
 
 Collection APIs files named `collection.rest` contain like this:
 
