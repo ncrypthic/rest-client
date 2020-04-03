@@ -43,11 +43,7 @@ func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
 	}
 	for _, segment := range segments {
 		lines := strings.Split(segment, "\n")
-		lines, method, url, err := ExtractHttpRequest(variable, skipEmptyLine(lines))
-		if err != nil {
-			return nil, segments, &variable, err
-		}
-		lines, header, err := ExtractHttpHeaders(variable, skipEmptyLine(lines))
+		lines, method, url, header, err := ExtractHttpRequest(variable, skipEmptyLine(lines))
 		if err != nil {
 			return nil, segments, &variable, err
 		}
@@ -69,19 +65,18 @@ func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
 func ExtractVariables(lines []string) (Variable, error) {
 	lines = skipEmptyLine(lines)
 
-	lines, _, url, err := ExtractHttpRequest(Variable{}, skipEmptyLine(lines))
-	if err != nil {
-		return Variable{}, err
-	}
-	lines, header, err := ExtractHttpHeaders(Variable{}, skipEmptyLine(lines))
+	lines, _, url, header, err := ExtractHttpRequest(Variable{}, skipEmptyLine(lines))
 	if err != nil {
 		return Variable{}, err
 	}
 	return Variable{URL: url, Header: header}, nil
 }
 
-func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, method string, reqURL *url.URL, err error) {
+func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, method string, reqURL *url.URL, header http.Header, err error) {
 	hostname := ""
+	if variable.URL != nil {
+		hostname = variable.URL.Hostname()
+	}
 	port := "80"
 	credentials := ""
 	scheme := "http"
@@ -89,9 +84,10 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 	path := ""
 	leftLines = skipEmptyLine(lines)
 	if len(leftLines) == 0 {
-		return leftLines, method, nil, nil
+		return leftLines, "", nil, nil, nil
 	}
-	if _, err := url.ParseRequestURI(trim(leftLines[0])); err == nil {
+	urlPattern := regexp.MustCompile("^http(?s):")
+	if urlPattern.MatchString(trim(leftLines[0])) {
 		reqURL, _ = url.Parse(trim(leftLines[0]))
 		hostname = reqURL.Hostname()
 		port = reqURL.Port()
@@ -109,12 +105,14 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 		credentials = variable.URL.User.String()
 		scheme = variable.URL.Scheme
 		path = variable.URL.RawPath
+		leftLines = skipEmptyLine(leftLines)
 	}
+	leftLines, header, err = ExtractHttpHeaders(variable, leftLines)
 	if len(leftLines) > 0 {
 		verbs := strings.SplitN(trim(leftLines[0]), " ", 2)
 		if len(verbs) == 1 {
-			err = InvalidRequestErr
-			return
+			err := InvalidRequestErr
+			return leftLines, "", nil, header, err
 		}
 		if extractHTTPVerb(verbs[0]) != "" {
 			method = verbs[0]
@@ -158,12 +156,13 @@ func extractHTTPVerb(str string) string {
 func ExtractHttpHeaders(variable Variable, lines []string) (leftLines []string, headers http.Header, err error) {
 	leftLines = skipEmptyLine(lines)
 	headers = make(http.Header)
+	httpCommand := regexp.MustCompile("^(GET|POST|PUT|DELETE|HEAD|OPTION|PATCH) ")
 	for {
 		if len(leftLines) == 0 {
 			return
 		}
 		line := leftLines[0]
-		if strings.Contains(line, ":") == false {
+		if httpCommand.MatchString(trim(line)) {
 			break
 		}
 		paramSegments := strings.SplitN(line, ":", 2)
@@ -179,15 +178,7 @@ func ExtractHttpHeaders(variable Variable, lines []string) (leftLines []string, 
 }
 
 func ExtractHttpPayload(variable Variable, lines []string) (io.ReadCloser, error) {
-	buf := bytes.NewBuffer([]byte{})
-	lines = skipEmptyLine(lines)
-	for idx, line := range lines {
-		suffix := "\n"
-		if idx == len(lines)-1 {
-			suffix = ""
-		}
-		buf.Write([]byte(line + suffix))
-	}
+	buf := bytes.NewBuffer([]byte(strings.Join(lines, "\n")))
 	return ioutil.NopCloser(buf), nil
 }
 

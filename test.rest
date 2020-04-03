@@ -7,18 +7,18 @@ post_id: abcde12345
 
 --
 
-GET /home
-
 authorization: :token
+
+GET /home
 
 --
 
 
 http://example1.com
 
-PUT /users/:user_id/posts/:post_id
-
 authorization: BEARER :token
+
+PUT /users/:user_id/posts/:post_id
 
 {
     "username": "test",
