@@ -29,7 +29,7 @@ func (v *Variable) GetOrElse(key string) string {
 
 func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
 	str := string(data)
-	segments := strings.Split(str, "--\n")
+	segments := skipEmptySegments(strings.Split(str, "--\n"))
 	requests := make([]*http.Request, 0)
 	var variable Variable
 	var err error
@@ -89,7 +89,7 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 	if len(leftLines) == 0 {
 		return leftLines, "", nil, nil, nil
 	}
-	urlPattern := regexp.MustCompile("^http(?s):")
+	urlPattern := regexp.MustCompile("^http(s?):")
 	if urlPattern.MatchString(trim(leftLines[0])) {
 		reqURL, _ = url.Parse(trim(leftLines[0]))
 		hostname = reqURL.Hostname()
@@ -102,7 +102,7 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 			port = ":" + reqURL.Port()
 		}
 		leftLines = skipEmptyLine(leftLines[1:])
-	} else {
+	} else if variable.URL != nil {
 		hostname = variable.URL.Hostname()
 		port = variable.URL.Port()
 		credentials = variable.URL.User.String()
@@ -218,4 +218,15 @@ func applyVariables(v Variable, str string) string {
 		return []byte(v.GetOrElse(strings.TrimPrefix(string(match), ":")))
 	})
 	return string(processed)
+}
+
+func skipEmptySegments(segments []string) []string {
+	res := make([]string, 0)
+	for _, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		res = append(res, segment)
+	}
+	return res
 }

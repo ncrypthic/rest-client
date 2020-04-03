@@ -136,7 +136,7 @@ func TestParse(t *testing.T) {
 
 		--
 
-		http://example2.com
+		https://example2.com
 
 		POST /users/register
 
@@ -179,8 +179,8 @@ func TestParse(t *testing.T) {
 			return
 		}
 		// requests.2
-		if requests[2].URL.String() != "http://example2.com/users/register" {
-			t.Errorf("Expected request.2.URL to be `http://example2.com/users/register`, got %s instead", requests[2].URL.String())
+		if requests[2].URL.String() != "https://example2.com/users/register" {
+			t.Errorf("Expected request.2.URL to be `https://example2.com/users/register`, got %s instead", requests[2].URL.String())
 			return
 		}
 		if requests[2].Method != http.MethodPost {
