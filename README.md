@@ -46,11 +46,11 @@ The `Global variables` must be in the following format:
 ```
 [Server hostname:port] # Can be replaced per-endpoint
 
-[Variable name]: [Variable value] # to use variable in Endpoint, add a colon (`:`) followed by the variable name (e.g. :token)
+[Variable name]: [Variable value] # to use variable in Endpoint, add a colon (`:`) followed by the variable name (e.g. `:token`)
 
 ```
 
-Variables will be applied on every part of [Endpoint](#endpoint)
+Variable placeholder will be subtitude with corresponding value on URL path, header value or payload of an [Endpoint](#endpoint). `rest-client` will also **watch the API collection file for any changes in the file** and reload every endpoints.
 
 ### Endpoint
 
