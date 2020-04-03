@@ -1,0 +1,45 @@
+--
+http://example.com
+
+token: xyz
+user_id: 123
+post_id: abcde12345
+
+--
+
+GET /home
+
+authorization: :token
+
+--
+
+http://example1.com
+
+PUT /users/:user_id/posts/:post_id
+
+authorization: BEARER :token
+
+{
+    "username": "test",
+    "password": "topsecret"
+}
+
+--
+
+http://example2.com
+
+POST /users/register
+
+{
+    "username": "test",
+    "password": "topsecret"
+}
+
+--
+
+POST /users/register
+
+{
+    "username": "test",
+    "password": "topsecret"
+}

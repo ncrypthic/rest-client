@@ -1,0 +1,224 @@
+package text
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+)
+
+var (
+	InvalidRequestErr   error = errors.New("Invalid request")
+	InvalidParameterErr       = errors.New("Invalid parameter")
+)
+
+type Variable struct {
+	URL       *url.URL
+	Header    http.Header
+	variables map[string]string
+}
+
+func (v *Variable) GetOrElse(key string) string {
+	return v.Header.Get(strings.Title(key))
+}
+
+func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
+	str := string(data)
+	segments := skipEmptyLine(strings.Split(str, "--\n"))
+	requests := make([]*http.Request, 0)
+	var variable Variable
+	var err error
+	if len(segments) > 1 {
+		lines := strings.Split(segments[0], "\n")
+		variable, err = ExtractVariables(skipEmptyLine(lines))
+		if err != nil {
+			return nil, segments, &variable, err
+		}
+		segments = segments[1:]
+	}
+	for _, segment := range segments {
+		lines := strings.Split(segment, "\n")
+		lines, method, url, err := ExtractHttpRequest(variable, skipEmptyLine(lines))
+		if err != nil {
+			return nil, segments, &variable, err
+		}
+		lines, header, err := ExtractHttpHeaders(variable, skipEmptyLine(lines))
+		if err != nil {
+			return nil, segments, &variable, err
+		}
+		body, err := ExtractHttpPayload(variable, skipEmptyLine(lines))
+		requests = append(requests, &http.Request{
+			Method: method,
+			URL:    url,
+			Header: header,
+			Body:   body,
+		})
+		if err != nil {
+			return nil, segments, &variable, err
+		}
+	}
+
+	return requests, segments, &variable, nil
+}
+
+func ExtractVariables(lines []string) (Variable, error) {
+	lines = skipEmptyLine(lines)
+
+	lines, _, url, err := ExtractHttpRequest(Variable{}, skipEmptyLine(lines))
+	if err != nil {
+		return Variable{}, err
+	}
+	lines, header, err := ExtractHttpHeaders(Variable{}, skipEmptyLine(lines))
+	if err != nil {
+		return Variable{}, err
+	}
+	return Variable{URL: url, Header: header}, nil
+}
+
+func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, method string, reqURL *url.URL, err error) {
+	hostname := ""
+	port := "80"
+	credentials := ""
+	scheme := "http"
+	method = http.MethodGet
+	path := ""
+	leftLines = skipEmptyLine(lines)
+	if len(leftLines) == 0 {
+		return leftLines, method, nil, nil
+	}
+	if _, err := url.ParseRequestURI(trim(leftLines[0])); err == nil {
+		reqURL, _ = url.Parse(trim(leftLines[0]))
+		hostname = reqURL.Hostname()
+		port = reqURL.Port()
+		if reqURL.User.String() != "" {
+			credentials = reqURL.User.String() + "@"
+		}
+		scheme = reqURL.Scheme
+		if reqURL.Port() != "" {
+			port = ":" + reqURL.Port()
+		}
+		leftLines = skipEmptyLine(leftLines[1:])
+	} else {
+		hostname = variable.URL.Hostname()
+		port = variable.URL.Port()
+		credentials = variable.URL.User.String()
+		scheme = variable.URL.Scheme
+		path = variable.URL.RawPath
+	}
+	if len(leftLines) > 0 {
+		verbs := strings.SplitN(trim(leftLines[0]), " ", 2)
+		if len(verbs) == 1 {
+			err = InvalidRequestErr
+			return
+		}
+		if extractHTTPVerb(verbs[0]) != "" {
+			method = verbs[0]
+			path = verbs[1]
+			leftLines = leftLines[1:]
+		}
+	}
+	urlString := fmt.Sprintf("%s://%s%s%s%s", scheme, credentials, hostname, applyVariables(variable, port), applyVariables(variable, path))
+	reqURL, err = url.Parse(urlString)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func extractHTTPVerb(str string) string {
+	switch strings.ToUpper(str) {
+	case http.MethodGet:
+		return http.MethodGet
+	case http.MethodPost:
+		return http.MethodPost
+	case http.MethodPut:
+		return http.MethodPut
+	case http.MethodDelete:
+		return http.MethodDelete
+	case http.MethodHead:
+		return http.MethodHead
+	case http.MethodOptions:
+		return http.MethodOptions
+	case http.MethodConnect:
+		return http.MethodConnect
+	case http.MethodPatch:
+		return http.MethodPatch
+	case http.MethodTrace:
+		return http.MethodTrace
+	default:
+		return ""
+	}
+}
+
+func ExtractHttpHeaders(variable Variable, lines []string) (leftLines []string, headers http.Header, err error) {
+	leftLines = skipEmptyLine(lines)
+	headers = make(http.Header)
+	for {
+		if len(leftLines) == 0 {
+			return
+		}
+		line := leftLines[0]
+		if strings.Contains(line, ":") == false {
+			break
+		}
+		paramSegments := strings.SplitN(line, ":", 2)
+		if len(paramSegments) != 2 {
+			err = InvalidParameterErr
+			return
+		}
+		headers.Add(trim(paramSegments[0]), applyVariables(variable, trim(paramSegments[1])))
+		leftLines = skipEmptyLine(leftLines[1:])
+	}
+
+	return
+}
+
+func ExtractHttpPayload(variable Variable, lines []string) (io.ReadCloser, error) {
+	buf := bytes.NewBuffer([]byte{})
+	lines = skipEmptyLine(lines)
+	for idx, line := range lines {
+		suffix := "\n"
+		if idx == len(lines)-1 {
+			suffix = ""
+		}
+		buf.Write([]byte(line + suffix))
+	}
+	return ioutil.NopCloser(buf), nil
+}
+
+func skipEmptyLine(lines []string) []string {
+	nonEmptyLines := make([]string, 0)
+	for idx, line := range lines {
+		if trim(line) != "" {
+			nonEmptyLines = lines[idx:]
+			break
+		}
+		idx = idx + 1
+	}
+	return nonEmptyLines
+}
+
+func trim(str string) string {
+	if str == "" {
+		return str
+	}
+	wsPrefixPattern := regexp.MustCompile(`^[[:space:]]*`)
+	wsSuffixPattern := regexp.MustCompile(`[[:space:]]*$`)
+	str = wsPrefixPattern.ReplaceAllString(str, "")
+	str = wsSuffixPattern.ReplaceAllString(str, "")
+
+	return str
+}
+
+func applyVariables(v Variable, str string) string {
+	pat := regexp.MustCompile(":[a-zA-Z0-9-_]+")
+	processed := pat.ReplaceAllFunc([]byte(str), func(match []byte) []byte {
+		return []byte(v.GetOrElse(strings.TrimPrefix(string(match), ":")))
+	})
+	return string(processed)
+}
