@@ -50,7 +50,7 @@ The `Global variables` must be in the following format:
 
 ```
 
-Variable placeholder will be subtitude with corresponding value on URL path, header value or payload of an [Endpoint](#endpoint). `rest-client` will also **watch the API collection file for any changes in the file** and reload every endpoints.
+Variable placeholder (`:some_variable`) will be replaced by the variable value on URL path, header value or payload of an [Endpoint](#endpoint) before the HTTP request sent to server. `rest-client` will also **watch the API collection file for any changes in the file** and reload every endpoints.
 
 ### Endpoint
 
