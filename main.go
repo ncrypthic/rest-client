@@ -67,10 +67,12 @@ func (cmd *EndpointContext) Execute(endpoint *Endpoint) error {
 	if err != nil {
 		log.Print(err.Error())
 	} else {
-		text, _ := ioutil.ReadAll(res.Body)
+		fmt.Printf("Status: %s\n", res.Status)
+		fmt.Println()
 		for k, v := range res.Header {
 			fmt.Printf("%s: %s\n", k, strings.Join(v, ";"))
 		}
+		text, _ := ioutil.ReadAll(res.Body)
 		fmt.Println()
 		fmt.Printf("%s\n", string(text))
 	}

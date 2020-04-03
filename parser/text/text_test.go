@@ -106,7 +106,7 @@ func TestExtractHttpPayload(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	t.Run("Parse: must be successful given a requests configuration", func(t *testing.T) {
-		config := `--
+		config := `# Global Variable
 		http://example.com
 
 		token: xyz
@@ -140,7 +140,7 @@ func TestParse(t *testing.T) {
 		    "username": "test",
 		    "password": "topsecret"
 		}`
-		requests, err := text.Parse([]byte(config))
+		requests, _, _, err := text.Parse([]byte(config))
 		if err != nil {
 			t.Fail()
 		}

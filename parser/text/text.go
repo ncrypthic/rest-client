@@ -29,7 +29,7 @@ func (v *Variable) GetOrElse(key string) string {
 
 func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
 	str := string(data)
-	segments := skipEmptyLine(strings.Split(str, "--\n"))
+	segments := strings.Split(str, "--\n")
 	requests := make([]*http.Request, 0)
 	var variable Variable
 	var err error
@@ -194,6 +194,9 @@ func ExtractHttpPayload(variable Variable, lines []string) (io.ReadCloser, error
 func skipEmptyLine(lines []string) []string {
 	nonEmptyLines := make([]string, 0)
 	for idx, line := range lines {
+		if strings.HasPrefix(trim(line), "#") {
+			continue
+		}
 		if trim(line) != "" {
 			nonEmptyLines = lines[idx:]
 			break

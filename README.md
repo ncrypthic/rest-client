@@ -65,8 +65,118 @@ The `[Endpoint]` must be in the following format:
 
 [REQUEST BODY]
 ```
+
+### Example
+
+Collection APIs files named `collection.rest` contain like this:
+
+```
+http://example.com
+
+token: xyz123
+user_id: 123
+post_id: abcde12345
+
+--
+
+GET /home
+
+authorization: :token
+
+--
+
+
+http://example1.com
+
+PUT /users/:user_id/posts/:post_id
+
+authorization: BEARER :token
+
+{
+    "username": "test",
+    "password": "topsecret"
+}
+
+--
+
+http://example3.com
+
+POST /users/register
+
+{
+    "username": "test",
+    "password": "topsecret"
+}
+
+--
+
+POST /users/register
+
+{
+    "username": "test",
+    "password": "topsecret"
+}
+```
+
+When run `rest-client development.rest` it will list the following APIs:
+
+```
+1) Variable
+2) GET http://example.com/home
+3) PUT http://example1.com/users/123/posts/abcde12345
+4) POST http://example3.com/users/register
+5) POST http://example.com/users/register
+Choose endpoint
+```
+
+If we choose the `2` in the `Endpoint menu`, it will show action menu like below:
+
+```
+1) *View
+2) Execute
+Endpoint menu
+```
+
+If we choose to view the endpoint (action no.1) from `Action menu`, it will show like below:
+
+```
+GET /home
+
+authorization: :token
+```
+
+If we choose to execute the http request, it will return the HTTP response header & body like:
+
+```
+Status: 404 Not Found
+
+Date: Fri, 03 Apr 2020 14:57:55 GMT
+Last-Modified: Wed, 01 Apr 2020 17:02:44 GMT
+Server: ECS (oxr/830B)
+Vary: Accept-Encoding
+Connection: Keep-Alive
+Age: 165311
+Content-Type: text/html; charset=UTF-8
+Cache-Control: max-age=604800, proxy-revalidate
+Expires: Fri, 10 Apr 2020 14:57:55 GMT
+X-Cache: 404-HIT
+
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+        <head>
+                <title>404 - Not Found</title>
+        </head>
+        <body>
+                <h1>404 - Not Found</h1>
+                <script type="text/javascript" src="//wpc.75674.betacdn.net/0075674/www/ec_tpm_bcon.js"></script>
+        </body>
+</html>
+```
+
 ## License
 
 MIT
 
-copyright (c) 2020 - Lim Afriyadi
+Copyright (c) 2020 - Lim Afriyadi
