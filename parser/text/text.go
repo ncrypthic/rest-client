@@ -43,6 +43,9 @@ func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
 	}
 	for _, segment := range segments {
 		lines := strings.Split(segment, "\n")
+		if len(skipEmptyLine(lines)) == 0 {
+			continue
+		}
 		lines, method, url, header, err := ExtractHttpRequest(variable, skipEmptyLine(lines))
 		if err != nil {
 			return nil, segments, &variable, err

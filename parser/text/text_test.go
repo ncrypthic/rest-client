@@ -113,10 +113,13 @@ func TestParse(t *testing.T) {
 		user_id: 123
 		post_id: abcde12345
 		--
+		--
 
 		authorization: :token
 
 		GET /home
+
+		--
 
 		--
 
