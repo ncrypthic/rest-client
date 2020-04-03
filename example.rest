@@ -28,7 +28,7 @@ PUT /users/:user_id/posts/:post_id
 
 --
 
-http://example3.com
+https://example3.com
 
 content-type: application/x-www-form-urlencoded
 
