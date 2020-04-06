@@ -26,7 +26,8 @@ const (
 )
 
 var (
-	isDebug bool = false
+	isDebug bool  = false
+	timeout int64 = 3
 )
 
 type Endpoint struct {
@@ -74,7 +75,7 @@ func (cmd *EndpointContext) Execute(req *http.Request, variable *text.Variable) 
 	if isDebug {
 		cmd.DisplayRequest(req, variable)
 	}
-	http.DefaultClient.Timeout = 3 * time.Second
+	http.DefaultClient.Timeout = time.Duration(timeout) * time.Second
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Print(err.Error())
@@ -266,7 +267,8 @@ func application(path string, ch <-chan bool) error {
 }
 
 func main() {
-	flag.BoolVar(&isDebug, "debug", false, "show debug messages")
+	flag.BoolVar(&isDebug, "debug", false, "show debug messages [default: false]")
+	flag.Int64Var(&timeout, "timeout", 15, "connect timeout in seconds [default: 15s]")
 	flag.Parse()
 	chFile, err := watchFile(flag.Arg(0))
 	if err != nil {
