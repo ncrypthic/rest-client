@@ -23,8 +23,11 @@ type Variable struct {
 	variables map[string]string
 }
 
-func (v *Variable) GetOrElse(key string) string {
-	return v.Header.Get(strings.Title(key))
+func (v *Variable) GetOrElse(key, value string) string {
+	if _, ok := v.Header[key]; ok {
+		return v.Header.Get(key)
+	}
+	return value
 }
 
 func Parse(data []byte) ([]*http.Request, []string, *Variable, error) {
@@ -80,7 +83,7 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 	if variable.URL != nil {
 		hostname = variable.URL.Hostname()
 	}
-	port := "80"
+	port := ":80"
 	credentials := ""
 	scheme := "http"
 	method = http.MethodGet
@@ -104,7 +107,7 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 		leftLines = skipEmptyLine(leftLines[1:])
 	} else if variable.URL != nil {
 		hostname = variable.URL.Hostname()
-		port = variable.URL.Port()
+		port = ":" + variable.URL.Port()
 		credentials = variable.URL.User.String()
 		scheme = variable.URL.Scheme
 		path = variable.URL.RawPath
@@ -123,7 +126,7 @@ func ExtractHttpRequest(variable Variable, lines []string) (leftLines []string, 
 			leftLines = leftLines[1:]
 		}
 	}
-	urlString := fmt.Sprintf("%s://%s%s%s%s", scheme, credentials, hostname, applyVariables(variable, port), applyVariables(variable, path))
+	urlString := fmt.Sprintf("%s://%s%s%s%s", scheme, credentials, hostname, port, applyVariables(variable, path))
 	reqURL, err = url.Parse(urlString)
 	if err != nil {
 		return
@@ -158,7 +161,7 @@ func extractHTTPVerb(str string) string {
 
 func ExtractHttpHeaders(variable Variable, lines []string) (leftLines []string, headers http.Header, err error) {
 	leftLines = skipEmptyLine(lines)
-	headers = make(http.Header)
+	headers = http.Header{}
 	httpCommand := regexp.MustCompile("^(GET|POST|PUT|DELETE|HEAD|OPTION|PATCH) ")
 	for {
 		if len(leftLines) == 0 {
@@ -173,7 +176,7 @@ func ExtractHttpHeaders(variable Variable, lines []string) (leftLines []string, 
 			err = InvalidParameterErr
 			return
 		}
-		headers.Add(trim(paramSegments[0]), applyVariables(variable, trim(paramSegments[1])))
+		headers[trim(paramSegments[0])] = strings.Split(applyVariables(variable, trim(paramSegments[1])), ";")
 		leftLines = skipEmptyLine(leftLines[1:])
 	}
 
@@ -213,11 +216,11 @@ func trim(str string) string {
 }
 
 func applyVariables(v Variable, str string) string {
-	pat := regexp.MustCompile(":[a-zA-Z0-9-_]+")
-	processed := pat.ReplaceAllFunc([]byte(str), func(match []byte) []byte {
-		return []byte(v.GetOrElse(strings.TrimPrefix(string(match), ":")))
+	pattern := regexp.MustCompile(":[a-zA-Z0-9-_]+")
+	processed := pattern.ReplaceAllStringFunc(str, func(match string) string {
+		return v.GetOrElse(strings.TrimPrefix(match, ":"), ":"+match)
 	})
-	return string(processed)
+	return processed
 }
 
 func skipEmptySegments(segments []string) []string {

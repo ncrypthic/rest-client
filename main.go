@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -22,6 +24,10 @@ const (
 	ActionList
 )
 
+var (
+	isDebug bool = false
+)
+
 type Endpoint struct {
 	Source  string
 	Request *http.Request
@@ -39,6 +45,7 @@ type EndpointContext struct {
 }
 
 func (cmd *EndpointContext) SetRequest(opt wmenu.Opt) error {
+	log.Println("setRequest")
 	switch t := opt.Value.(type) {
 	case *Endpoint:
 		cmd.Endpoint = t
@@ -54,16 +61,20 @@ func (cmd *EndpointContext) SetAction(opt wmenu.Opt) error {
 	action := opt.Value.(int)
 	switch action {
 	case ActionExecute:
-		return cmd.Execute(cmd.Endpoint)
+		return cmd.Execute(cmd.Endpoint.Request, cmd.Variable)
 	case ActionView:
-		return cmd.Display(cmd.Endpoint, cmd.Variable)
+		return cmd.Display(cmd.Endpoint.Request, cmd.Variable)
 	default:
 	}
 	return nil
 }
 
-func (cmd *EndpointContext) Execute(endpoint *Endpoint) error {
-	res, err := http.DefaultClient.Do(cmd.Endpoint.Request)
+func (cmd *EndpointContext) Execute(req *http.Request, variable *text.Variable) error {
+	if isDebug {
+		cmd.DisplayRequest(req, variable)
+	}
+	http.DefaultClient.Timeout = 3 * time.Second
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Print(err.Error())
 	} else {
@@ -84,9 +95,9 @@ func (cmd *EndpointContext) Edit(opt wmenu.Opt) error {
 	return nil
 }
 
-func (cmd *EndpointContext) Display(endpoint *Endpoint, variable *text.Variable) error {
+func (cmd *EndpointContext) Display(req *http.Request, variable *text.Variable) error {
 	if cmd.Endpoint != nil {
-		cmd.DisplayEndpoint(cmd.Endpoint)
+		cmd.DisplayRequest(req, variable)
 	} else if cmd.Variable != nil {
 		cmd.DisplayVariable(variable)
 	}
@@ -111,8 +122,22 @@ func (cmd *EndpointContext) DisplayVariable(v *text.Variable) error {
 	return nil
 }
 
-func (cmd *EndpointContext) DisplayEndpoint(endpoint *Endpoint) error {
-	fmt.Println(endpoint.Source)
+func (cmd *EndpointContext) DisplayRequest(req *http.Request, variable *text.Variable) error {
+	fmt.Println(req.URL.String())
+	fmt.Println()
+	for k, v := range req.Header {
+		fmt.Printf("%s: %s\n", k, strings.Join(v, ";"))
+	}
+	fmt.Println()
+	if req.Body != nil {
+		var buf bytes.Buffer
+		buf.ReadFrom(req.Body)
+		payload, _ := ioutil.ReadAll(&buf)
+		fmt.Println(string(payload))
+		buf2 := bytes.NewBuffer(payload)
+		req.Body = ioutil.NopCloser(buf2)
+		fmt.Println()
+	}
 	fmt.Fscanf(os.Stdin, "Press any key")
 	return nil
 }
@@ -205,25 +230,15 @@ func watchFile(path string) (<-chan bool, error) {
 }
 
 func application(path string, ch <-chan bool) error {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	requests, segments, variable, err := text.Parse(data)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for {
-			<-ch
-			log.Println("Reload endpoints")
-			data, err := ioutil.ReadFile(path)
-			if err == nil {
-				requests, segments, variable, _ = text.Parse(data)
-			}
-		}
-	}()
 	for {
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		requests, segments, variable, err := text.Parse(data)
+		if err != nil {
+			return err
+		}
 		ctx := &EndpointContext{}
 		mainMenu := MainMenu(requests, segments, variable, ctx)
 		actionMenu := ActionMenu()(ctx.SetAction)
@@ -234,9 +249,11 @@ func application(path string, ch <-chan bool) error {
 }
 
 func main() {
-	chFile, err := watchFile(os.Args[1])
+	flag.BoolVar(&isDebug, "debug", false, "show debug messages")
+	flag.Parse()
+	chFile, err := watchFile(flag.Arg(0))
 	if err != nil {
 		panic(err)
 	}
-	application(os.Args[1], chFile)
+	application(flag.Arg(0), chFile)
 }
