@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -25,7 +26,7 @@ type Variable struct {
 
 func (v *Variable) GetOrElse(key, value string) string {
 	if _, ok := v.Header[key]; ok {
-		return v.Header.Get(key)
+		return strings.Join(v.Header[key], ";")
 	}
 	return value
 }
@@ -217,10 +218,12 @@ func trim(str string) string {
 
 func applyVariables(v Variable, str string) string {
 	pattern := regexp.MustCompile(":[a-zA-Z0-9-_]+")
-	processed := pattern.ReplaceAllStringFunc(str, func(match string) string {
-		return v.GetOrElse(strings.TrimPrefix(match, ":"), ":"+match)
+	processed := pattern.ReplaceAllFunc([]byte(str), func(match []byte) []byte {
+		log.Println(string(match[1:]))
+		log.Println(v.GetOrElse(string(match[1:]), string(match)))
+		return []byte(v.GetOrElse(string(match[1:]), ":"+string(match)))
 	})
-	return processed
+	return string(processed)
 }
 
 func skipEmptySegments(segments []string) []string {

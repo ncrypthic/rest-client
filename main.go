@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -123,7 +124,7 @@ func (cmd *EndpointContext) DisplayVariable(v *text.Variable) error {
 }
 
 func (cmd *EndpointContext) DisplayRequest(req *http.Request, variable *text.Variable) error {
-	fmt.Println(req.URL.String())
+	fmt.Println(cmd.DisplayURL(req.URL))
 	fmt.Println()
 	for k, v := range req.Header {
 		fmt.Printf("%s: %s\n", k, strings.Join(v, ";"))
@@ -140,6 +141,22 @@ func (cmd *EndpointContext) DisplayRequest(req *http.Request, variable *text.Var
 	}
 	fmt.Fscanf(os.Stdin, "Press any key")
 	return nil
+}
+
+func (cmd *EndpointContext) DisplayURL(url *url.URL) string {
+	urlString := ""
+	if url.Scheme != "" {
+		urlString = url.Scheme + "://"
+	}
+	if url.User != nil {
+		urlString = urlString + url.User.Username()
+		if passwd, hasPwd := url.User.Password(); hasPwd {
+			urlString = urlString + ":" + passwd
+		}
+		urlString = urlString + "@"
+	}
+	urlString = urlString + url.Host
+	return urlString
 }
 
 type MenuHandler func(wmenu.Opt) error

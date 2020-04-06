@@ -57,11 +57,11 @@ func TestExtractHttpHeader(t *testing.T) {
 		if header == nil {
 			t.Errorf("header must not nil")
 		}
-		if header.Get("authorization") != "BEARER token" {
-			t.Errorf("HTTP authorization header value must be `BEARER token`, got `%s` instead", header.Get("authorization"))
+		if strings.Join(header["authorization"], ";") != "BEARER token" {
+			t.Errorf("HTTP authorization header value must be `BEARER token`, got `%s` instead", strings.Join(header["authorization"], ";"))
 		}
-		if header.Get("user-agent") != "Chrome" {
-			t.Errorf("HTTP authorization header value must be `BEARER token`, got `%s` instead", header.Get("authorization"))
+		if strings.Join(header["user-agent"], ";") != "Chrome" {
+			t.Errorf("HTTP authorization header value must be `BEARER token`, got `%s` instead", strings.Join(header["authorization"], ";"))
 		}
 		if len(header) != 3 {
 			t.Errorf("Header length must be 3, got `%d`", len(header))
@@ -153,16 +153,16 @@ func TestParse(t *testing.T) {
 			return
 		}
 		// requests.0
-		if requests[0].URL.String() != "http://example.com/home" {
-			t.Errorf("Expected request.0.URL to be `http://example.com/home`, got %s instead", requests[0].URL.String())
+		if requests[0].URL.String() != "http://example.com:/home" {
+			t.Errorf("Expected request.0.URL to be `http://example.com:/home`, got %s instead", requests[0].URL.String())
 			return
 		}
 		if requests[0].Method != http.MethodGet {
 			t.Errorf("Expected request.0.Method to be `GET`, got %s instead", requests[0].Method)
 			return
 		}
-		if requests[0].Header.Get("authorization") != "xyz" {
-			t.Errorf("Expected request.0.Header['Token'] to be `xyz`, got `%s` instead", requests[0].Header.Get("authorization"))
+		if strings.Join(requests[0].Header["authorization"], ";") != "xyz" {
+			t.Errorf("Expected request.0.Header['authorization'] to be `xyz`, got `%#v` instead", requests[0].Header)
 			return
 		}
 		// requests.1
@@ -174,8 +174,8 @@ func TestParse(t *testing.T) {
 			t.Errorf("Expected request.1.Method to be `PUT`, got %s instead", requests[1].Method)
 			return
 		}
-		if requests[1].Header.Get("authorization") != "BEARER xyz" {
-			t.Errorf("Expected request.1.Header['Token'] to be `BEARER xyz`, got `%s` instead", requests[1].Header.Get("authorization"))
+		if strings.Join(requests[1].Header["authorization"], ";") != "BEARER xyz" {
+			t.Errorf("Expected request.1.Header['Token'] to be `BEARER xyz`, got `%s` instead", strings.Join(requests[1].Header["authorization"], ";"))
 			return
 		}
 		// requests.2
